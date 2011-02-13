@@ -1,5 +1,3 @@
-
-#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sndfile.h>
@@ -18,11 +16,15 @@ SNDFILE* read_wave(char* filename, SF_INFO* info) {
   return snd;
 }
 
-float* read_whole_buffer(SNDFILE* snd, SF_INFO* info) {
+double* read_whole_buffer(SNDFILE* snd, SF_INFO* info) {
   sf_count_t count = info_n(info);
-  float* buffer = malloc(sizeof(float) * count);
-  sf_read_float(snd, buffer, count);
+  double* buffer = malloc(sizeof(double) * count);
+  sf_read_double(snd, buffer, count);
   return buffer;
+}
+
+double fabs(double n) {
+  return (n < 0.0) ? -n : n;
 }
 
 void convolve_wave(char* infile, char* iirfile, char* outfile) {
@@ -31,18 +33,18 @@ void convolve_wave(char* infile, char* iirfile, char* outfile) {
   SNDFILE* in_snd = read_wave(infile, &in_info);
   SNDFILE* iir_snd = read_wave(iirfile, &iir_info);
 
-  float* in_buffer = read_whole_buffer(in_snd, &in_info);
-  float* iir_buffer = read_whole_buffer(iir_snd, &iir_info);
+  double* in_buffer = read_whole_buffer(in_snd, &in_info);
+  double* iir_buffer = read_whole_buffer(iir_snd, &iir_info);
 
   sf_count_t in_len = info_n(&in_info);
   sf_count_t iir_len = info_n(&iir_info);
   sf_count_t out_len = in_len + iir_len - 1;
 
-  float* out = malloc(sizeof(float) * out_len);
+  double* out = malloc(sizeof(double) * out_len);
 
   // convolution
   printf("Convolution.\n");
-  float val, max;
+  double val, max;
   sf_count_t low, high, i, j;
 
   // BEWARE OFF BY ONE ERRORS
@@ -62,7 +64,7 @@ void convolve_wave(char* infile, char* iirfile, char* outfile) {
       val += in_buffer[j] * iir_buffer[k];
     }
 
-    if (abs(val) > max) max = abs(val);
+    if (fabs(val) > max) max = fabs(val);
     out[i] = val;
   }
 
@@ -83,7 +85,7 @@ void convolve_wave(char* infile, char* iirfile, char* outfile) {
   printf("writing %d frames.\n", out_info.frames);
 
   SNDFILE* out_snd = sf_open(outfile, SFM_WRITE, &out_info);
-  sf_write_float(out_snd, out, out_len);
+  sf_write_double(out_snd, out, out_len);
   sf_close(out_snd);
   free(out);
 }
